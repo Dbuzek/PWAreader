@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Čtečka</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            padding: 20px; 
+            background-color: #f4f5f7; 
+            color: #1f2937; 
+            margin: 0;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            background: #ffffff; 
+            padding: 24px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+        }
+        h2 { margin-top: 0; color: #111827; }
+        textarea { 
+            width: 100%; 
+            height: 250px; 
+            padding: 12px; 
+            margin-bottom: 20px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 16px; 
+            line-height: 1.5;
+            resize: vertical; 
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        button { 
+            background-color: #2563eb; 
+            color: white; 
+            border: none; 
+            padding: 14px 20px; 
+            font-size: 16px; 
+            font-weight: 600;
+            border-radius: 6px; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-bottom: 12px; 
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #1d4ed8; }
+        .stop-btn { background-color: #ef4444; }
+        .stop-btn:hover { background-color: #b91c1c; }
+        .controls { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; }
+        input[type="range"] { width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Předčítání textu</h2>
+        <textarea id="textToRead" placeholder="Nasdílený text se zobrazí zde..."></textarea>
+        
+        <div class="controls">
+            <label for="rate">Rychlost čtení: <span id="rateValue">1.0</span>x</label>
+            <input type="range" id="rate" min="0.5" max="2" value="1" step="0.1">
+        </div>
+
+        <button id="playBtn">Přehrát text</button>
+        <button id="stopBtn" class="stop-btn">Zastavit</button>
+    </div>
+
+    <script>
+        // 1. Registrace Service Workeru
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .catch(err => console.error('Chyba registrace SW:', err));
+        }
+
+        // 2. Zachycení sdíleného textu z URL
+        const params = new URLSearchParams(window.location.search);
+        const sharedText = params.get('text') || params.get('title') || '';
+        const textArea = document.getElementById('textToRead');
+        
+        if (sharedText) {
+            textArea.value = sharedText;
+            // Vyčištění URL lišty pro reprezentativní dojem
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // 3. Logika předčítání (Web Speech API)
+        const synth = window.speechSynthesis;
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const rateInput = document.getElementById('rate');
+        const rateValue = document.getElementById('rateValue');
+
+        rateInput.addEventListener('input', () => {
+            rateValue.textContent = parseFloat(rateInput.value).toFixed(1);
+        });
+
+        playBtn.addEventListener('click', () => {
+            // Zrušíme aktuální čtení, pokud běží
+            if (synth.speaking) synth.cancel();
+            
+            const text = textArea.value.trim();
+            if (text !== '') {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'cs-CZ'; 
+                utterance.rate = parseFloat(rateInput.value);
+                synth.speak(utterance);
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (synth.speaking) synth.cancel();
+        });
+    </script>
+</body>
+</html>
