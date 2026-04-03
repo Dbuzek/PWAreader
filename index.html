@@ -2,123 +2,661 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Audio Čtečka</title>
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Čtečka">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <style>
-        body { 
-            font-family: system-ui, -apple-system, sans-serif; 
-            padding: 20px; 
-            background-color: #f4f5f7; 
-            color: #1f2937; 
-            margin: 0;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --accent:      #6366f1;
+            --accent-dark: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.35);
+            --bg:          #0f0f1a;
+            --surface:     #16182a;
+            --surface2:    #1e2035;
+            --border:      rgba(99, 102, 241, 0.2);
+            --text:        #e2e8f0;
+            --text-muted:  #94a3b8;
+            --red:         #ef4444;
+            --red-dark:    #b91c1c;
+            --green:       #22c55e;
+            --radius:      16px;
+            --radius-sm:   10px;
         }
-        .container { 
-            max-width: 600px; 
-            margin: 20px auto; 
-            background: #ffffff; 
-            padding: 24px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg:       #f1f5f9;
+                --surface:  #ffffff;
+                --surface2: #f8fafc;
+                --border:   rgba(99, 102, 241, 0.15);
+                --text:     #1e293b;
+                --text-muted: #64748b;
+            }
         }
-        h2 { margin-top: 0; color: #111827; }
-        textarea { 
-            width: 100%; 
-            height: 250px; 
-            padding: 12px; 
-            margin-bottom: 20px; 
-            border: 1px solid #d1d5db; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            font-size: 16px; 
-            line-height: 1.5;
-            resize: vertical; 
+
+        html, body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
+
+        body {
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+            padding-top: max(env(safe-area-inset-top, 0px), 0px);
+        }
+
+        /* ---------- Header ---------- */
+        header {
+            width: 100%;
+            padding: 18px 24px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .logo svg { width: 22px; height: 22px; color: white; }
+
+        header h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+
+        header p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        /* ---------- Main ---------- */
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 640px;
+            padding: 20px 16px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* ---------- Card ---------- */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+        }
+
+        .card-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* ---------- Textarea ---------- */
+        .textarea-wrap { position: relative; }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 14px;
+            background: var(--surface2);
+            color: var(--text);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            line-height: 1.65;
+            resize: vertical;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        textarea::placeholder { color: var(--text-muted); }
+
         textarea:focus {
             outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
         }
-        button { 
-            background-color: #2563eb; 
-            color: white; 
-            border: none; 
-            padding: 14px 20px; 
-            font-size: 16px; 
+
+        .char-count {
+            position: absolute;
+            bottom: 8px;
+            right: 10px;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* ---------- Controls ---------- */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .control-group {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .control-group label span {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 0.85rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-glow);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 14px var(--accent-glow);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        /* ---------- Waveform ---------- */
+        .waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 48px;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .waveform.active { opacity: 1; }
+
+        .waveform .bar {
+            width: 4px;
+            border-radius: 2px;
+            background: linear-gradient(to top, var(--accent-dark), var(--accent));
+            animation: wave 1s ease-in-out infinite;
+        }
+
+        .waveform .bar:nth-child(1)  { animation-delay: 0s;    --h: 16px; }
+        .waveform .bar:nth-child(2)  { animation-delay: 0.1s;  --h: 30px; }
+        .waveform .bar:nth-child(3)  { animation-delay: 0.2s;  --h: 42px; }
+        .waveform .bar:nth-child(4)  { animation-delay: 0.05s; --h: 28px; }
+        .waveform .bar:nth-child(5)  { animation-delay: 0.15s; --h: 38px; }
+        .waveform .bar:nth-child(6)  { animation-delay: 0.25s; --h: 20px; }
+        .waveform .bar:nth-child(7)  { animation-delay: 0.1s;  --h: 34px; }
+        .waveform .bar:nth-child(8)  { animation-delay: 0.2s;  --h: 46px; }
+        .waveform .bar:nth-child(9)  { animation-delay: 0.05s; --h: 24px; }
+        .waveform .bar:nth-child(10) { animation-delay: 0.15s; --h: 40px; }
+        .waveform .bar:nth-child(11) { animation-delay: 0.0s;  --h: 28px; }
+        .waveform .bar:nth-child(12) { animation-delay: 0.25s; --h: 16px; }
+
+        @keyframes wave {
+            0%, 100% { height: 6px; }
+            50%       { height: var(--h, 20px); }
+        }
+
+        /* ---------- Status ---------- */
+        .status {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            min-height: 20px;
+            transition: color 0.3s;
+        }
+
+        .status.playing { color: var(--accent); }
+        .status.stopped { color: var(--text-muted); }
+
+        /* ---------- Buttons ---------- */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+        }
+
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.95rem;
             font-weight: 600;
-            border-radius: 6px; 
-            cursor: pointer; 
-            width: 100%; 
-            margin-bottom: 12px; 
-            transition: background-color 0.2s;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s, background-color 0.2s;
+            padding: 14px 20px;
+            user-select: none;
+            -webkit-user-select: none;
         }
-        button:hover { background-color: #1d4ed8; }
-        .stop-btn { background-color: #ef4444; }
-        .stop-btn:hover { background-color: #b91c1c; }
-        .controls { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 500; }
-        input[type="range"] { width: 100%; }
+
+        button:active { transform: scale(0.97); }
+
+        .btn-play {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: white;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-play:hover { box-shadow: 0 6px 28px var(--accent-glow); }
+
+        .btn-play.playing {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+        }
+
+        .btn-stop {
+            background: var(--surface2);
+            color: var(--red);
+            border: 1.5px solid rgba(239, 68, 68, 0.25);
+            padding: 14px 16px;
+        }
+
+        .btn-stop:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--red);
+        }
+
+        button svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+        /* ---------- Install banner ---------- */
+        #install-banner {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(79,70,229,0.1));
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            color: var(--text);
+        }
+
+        #install-banner.show { display: flex; }
+
+        #install-banner .install-icon {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        #install-banner p { flex: 1; line-height: 1.4; }
+        #install-banner p strong { color: var(--accent); }
+
+        .btn-install {
+            background: var(--accent);
+            color: white;
+            font-size: 0.8rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .btn-install:hover { background: var(--accent-dark); }
+
+        #install-banner .close-banner {
+            background: none;
+            color: var(--text-muted);
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 1rem;
+            min-width: 0;
+        }
+
+        /* ---------- Toast ---------- */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 18px;
+            border-radius: 50px;
+            font-size: 0.83rem;
+            font-weight: 500;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* ---------- Clear btn ---------- */
+        .btn-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            padding: 0;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-clear:hover { color: var(--text); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Předčítání textu</h2>
-        <textarea id="textToRead" placeholder="Nasdílený text se zobrazí zde..."></textarea>
-        
-        <div class="controls">
-            <label for="rate">Rychlost čtení: <span id="rateValue">1.0</span>x</label>
-            <input type="range" id="rate" min="0.5" max="2" value="1" step="0.1">
+
+    <header>
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/>
+                <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+            </svg>
+        </div>
+        <div>
+            <h1>Audio Čtečka</h1>
+            <p>Text-to-speech &middot; Čeština</p>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Install banner -->
+        <div id="install-banner">
+            <div class="install-icon">📲</div>
+            <p><strong>Nainstalovat aplikaci</strong><br>Přidejte na plochu pro rychlý přístup a sdílení</p>
+            <button class="btn-install" id="install-btn">Instalovat</button>
+            <button class="close-banner" id="close-banner" aria-label="Zavřít">✕</button>
         </div>
 
-        <button id="playBtn">Přehrát text</button>
-        <button id="stopBtn" class="stop-btn">Zastavit</button>
-    </div>
+        <!-- Text card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-label">Text ke čtení</div>
+                <button class="btn-clear" id="clearBtn">Vymazat</button>
+            </div>
+            <div class="textarea-wrap">
+                <textarea id="textToRead" placeholder="Vložte nebo nasdílejte text, který má být přečten…" spellcheck="false"></textarea>
+                <span class="char-count" id="charCount">0 znaků</span>
+            </div>
+        </div>
+
+        <!-- Settings card -->
+        <div class="card">
+            <div class="card-label">Nastavení přehrávání</div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>Rychlost <span id="rateValue">1.0×</span></label>
+                    <input type="range" id="rate" min="0.5" max="2" value="1" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Výška hlasu <span id="pitchValue">1.0</span></label>
+                    <input type="range" id="pitch" min="0.5" max="2" value="1" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <!-- Player card -->
+        <div class="card">
+            <div class="waveform" id="waveform">
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            </div>
+            <p class="status" id="status">Připraveno ke čtení</p>
+            <br>
+            <div class="btn-group">
+                <button class="btn-play" id="playBtn">
+                    <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                    <span id="playLabel">Přehrát</span>
+                </button>
+                <button class="btn-stop" id="stopBtn" title="Zastavit">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="toast" id="toast"></div>
 
     <script>
-        // 1. Registrace Service Workeru
+        // ── Service Worker ──────────────────────────────────────────
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
-                .catch(err => console.error('Chyba registrace SW:', err));
+                .catch(err => console.error('SW error:', err));
         }
 
-        // 2. Zachycení sdíleného textu z URL
+        // ── Sdílený text z URL ──────────────────────────────────────
         const params = new URLSearchParams(window.location.search);
         const sharedText = params.get('text') || params.get('title') || '';
         const textArea = document.getElementById('textToRead');
-        
+
         if (sharedText) {
             textArea.value = sharedText;
-            // Vyčištění URL lišty pro reprezentativní dojem
             window.history.replaceState({}, document.title, window.location.pathname);
+            showToast('Text byl nasdílen ✓');
         }
 
-        // 3. Logika předčítání (Web Speech API)
-        const synth = window.speechSynthesis;
-        const playBtn = document.getElementById('playBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const rateInput = document.getElementById('rate');
-        const rateValue = document.getElementById('rateValue');
+        // ── Char count ──────────────────────────────────────────────
+        const charCount = document.getElementById('charCount');
 
-        rateInput.addEventListener('input', () => {
-            rateValue.textContent = parseFloat(rateInput.value).toFixed(1);
+        function updateCharCount() {
+            const n = textArea.value.length;
+            charCount.textContent = n === 0 ? '0 znaků' : `${n.toLocaleString('cs')} znaků`;
+        }
+
+        textArea.addEventListener('input', updateCharCount);
+        updateCharCount();
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            textArea.value = '';
+            updateCharCount();
+            textArea.focus();
         });
 
-        playBtn.addEventListener('click', () => {
-            // Zrušíme aktuální čtení, pokud běží
-            if (synth.speaking) synth.cancel();
-            
-            const text = textArea.value.trim();
-            if (text !== '') {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'cs-CZ'; 
-                utterance.rate = parseFloat(rateInput.value);
-                synth.speak(utterance);
+        // ── Sliders ─────────────────────────────────────────────────
+        const rateInput  = document.getElementById('rate');
+        const pitchInput = document.getElementById('pitch');
+        const rateValue  = document.getElementById('rateValue');
+        const pitchValue = document.getElementById('pitchValue');
+
+        rateInput.addEventListener('input', () => {
+            rateValue.textContent = parseFloat(rateInput.value).toFixed(1) + '×';
+        });
+
+        pitchInput.addEventListener('input', () => {
+            pitchValue.textContent = parseFloat(pitchInput.value).toFixed(1);
+        });
+
+        // ── Speech ──────────────────────────────────────────────────
+        const synth     = window.speechSynthesis;
+        const playBtn   = document.getElementById('playBtn');
+        const playIcon  = document.getElementById('playIcon');
+        const playLabel = document.getElementById('playLabel');
+        const stopBtn   = document.getElementById('stopBtn');
+        const waveform  = document.getElementById('waveform');
+        const statusEl  = document.getElementById('status');
+
+        let isPlaying = false;
+
+        function setPlaying(state) {
+            isPlaying = state;
+            waveform.classList.toggle('active', state);
+            playBtn.classList.toggle('playing', state);
+
+            if (state) {
+                playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+                playLabel.textContent = 'Pozastavit';
+                statusEl.textContent  = 'Probíhá čtení…';
+                statusEl.className    = 'status playing';
+            } else {
+                playIcon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+                playLabel.textContent = 'Přehrát';
+                statusEl.textContent  = 'Připraveno ke čtení';
+                statusEl.className    = 'status stopped';
             }
+        }
+
+        playBtn.addEventListener('click', () => {
+            const text = textArea.value.trim();
+            if (!text) {
+                showToast('Nejprve vložte nějaký text');
+                textArea.focus();
+                return;
+            }
+
+            if (synth.speaking && !synth.paused) {
+                synth.pause();
+                setPlaying(false);
+                statusEl.textContent = 'Pozastaveno';
+                return;
+            }
+
+            if (synth.paused) {
+                synth.resume();
+                setPlaying(true);
+                return;
+            }
+
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang  = 'cs-CZ';
+            utterance.rate  = parseFloat(rateInput.value);
+            utterance.pitch = parseFloat(pitchInput.value);
+
+            utterance.onstart = () => setPlaying(true);
+            utterance.onend   = () => setPlaying(false);
+            utterance.onerror = () => setPlaying(false);
+
+            synth.speak(utterance);
         });
 
         stopBtn.addEventListener('click', () => {
-            if (synth.speaking) synth.cancel();
+            synth.cancel();
+            setPlaying(false);
         });
+
+        // ── Install prompt ──────────────────────────────────────────
+        let deferredPrompt = null;
+        const installBanner = document.getElementById('install-banner');
+        const installBtn    = document.getElementById('install-btn');
+        const closeBanner   = document.getElementById('close-banner');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBanner.classList.add('show');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            installBanner.classList.remove('show');
+            if (outcome === 'accepted') showToast('Aplikace nainstalována ✓');
+        });
+
+        closeBanner.addEventListener('click', () => {
+            installBanner.classList.remove('show');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBanner.classList.remove('show');
+            deferredPrompt = null;
+        });
+
+        // ── Toast ───────────────────────────────────────────────────
+        let toastTimer = null;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+        }
     </script>
 </body>
 </html>
