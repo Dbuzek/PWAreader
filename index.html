@@ -156,12 +156,11 @@
         }
 
         .char-count {
-            position: absolute;
-            bottom: 8px;
-            right: 10px;
-            font-size: 0.68rem;
+            display: block;
+            text-align: right;
+            font-size: 0.7rem;
             color: var(--text-muted);
-            pointer-events: none;
+            margin-top: 6px;
         }
 
         /* ---------- Controls ---------- */
@@ -502,7 +501,7 @@
         </div>
         <div>
             <h1>Audio Čtečka</h1>
-            <p>Text-to-speech &middot; Čeština</p>
+            <p id="header-lang">Text-to-speech &middot; Čeština</p>
         </div>
     </header>
 
@@ -531,8 +530,8 @@
             </div>
             <div class="textarea-wrap">
                 <textarea id="textToRead" placeholder="Vložte nebo nasdílejte text, který má být přečten…" spellcheck="false"></textarea>
-                <span class="char-count" id="charCount">0 znaků</span>
             </div>
+            <span class="char-count" id="charCount">0 znaků</span>
         </div>
 
         <!-- Settings card -->
@@ -554,18 +553,18 @@
         <div class="card">
             <div class="card-label">Jazyk předčítání</div>
             <div class="lang-grid" id="langGrid">
-                <button class="lang-chip" data-lang="cs-CZ"><span class="lang-flag">🇨🇿</span> Čeština</button>
-                <button class="lang-chip" data-lang="sk-SK"><span class="lang-flag">🇸🇰</span> Slovenčina</button>
-                <button class="lang-chip" data-lang="en-GB"><span class="lang-flag">🇬🇧</span> English</button>
-                <button class="lang-chip" data-lang="en-US"><span class="lang-flag">🇺🇸</span> English US</button>
-                <button class="lang-chip" data-lang="de-DE"><span class="lang-flag">🇩🇪</span> Deutsch</button>
-                <button class="lang-chip" data-lang="fr-FR"><span class="lang-flag">🇫🇷</span> Français</button>
-                <button class="lang-chip" data-lang="es-ES"><span class="lang-flag">🇪🇸</span> Español</button>
-                <button class="lang-chip" data-lang="it-IT"><span class="lang-flag">🇮🇹</span> Italiano</button>
-                <button class="lang-chip" data-lang="pl-PL"><span class="lang-flag">🇵🇱</span> Polski</button>
-                <button class="lang-chip" data-lang="uk-UA"><span class="lang-flag">🇺🇦</span> Українська</button>
-                <button class="lang-chip" data-lang="ru-RU"><span class="lang-flag">🇷🇺</span> Русский</button>
-                <button class="lang-chip" data-lang="zh-CN"><span class="lang-flag">🇨🇳</span> 中文</button>
+                <button class="lang-chip" data-lang="cs-CZ" data-label="Čeština"><span class="lang-flag">🇨🇿</span> Čeština</button>
+                <button class="lang-chip" data-lang="sk-SK" data-label="Slovenčina"><span class="lang-flag">🇸🇰</span> Slovenčina</button>
+                <button class="lang-chip" data-lang="en-GB" data-label="English (UK)"><span class="lang-flag">🇬🇧</span> English</button>
+                <button class="lang-chip" data-lang="en-US" data-label="English (US)"><span class="lang-flag">🇺🇸</span> English US</button>
+                <button class="lang-chip" data-lang="de-DE" data-label="Deutsch"><span class="lang-flag">🇩🇪</span> Deutsch</button>
+                <button class="lang-chip" data-lang="fr-FR" data-label="Français"><span class="lang-flag">🇫🇷</span> Français</button>
+                <button class="lang-chip" data-lang="es-ES" data-label="Español"><span class="lang-flag">🇪🇸</span> Español</button>
+                <button class="lang-chip" data-lang="it-IT" data-label="Italiano"><span class="lang-flag">🇮🇹</span> Italiano</button>
+                <button class="lang-chip" data-lang="pl-PL" data-label="Polski"><span class="lang-flag">🇵🇱</span> Polski</button>
+                <button class="lang-chip" data-lang="uk-UA" data-label="Українська"><span class="lang-flag">🇺🇦</span> Українська</button>
+                <button class="lang-chip" data-lang="ru-RU" data-label="Русский"><span class="lang-flag">🇷🇺</span> Русский</button>
+                <button class="lang-chip" data-lang="zh-CN" data-label="中文"><span class="lang-flag">🇨🇳</span> 中文</button>
             </div>
         </div>
 
@@ -684,17 +683,17 @@
 
         const langChips = document.querySelectorAll('.lang-chip');
 
+        const headerLang = document.getElementById('header-lang');
+
         function activateLang(lang) {
             selectedLang = lang;
             localStorage.setItem(LANG_KEY, lang);
             langChips.forEach(chip => {
                 chip.classList.toggle('active', chip.dataset.lang === lang);
             });
-            // Update header subtitle
             const active = document.querySelector(`.lang-chip[data-lang="${lang}"]`);
-            if (active) {
-                const label = active.textContent.trim();
-                document.querySelector('header p').textContent = `Text-to-speech · ${label}`;
+            if (active && headerLang) {
+                headerLang.textContent = `Text-to-speech · ${active.dataset.label}`;
             }
         }
 
@@ -757,7 +756,6 @@
                 return;
             }
 
-            synth.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang  = selectedLang;
             utterance.rate  = parseFloat(rateInput.value);
@@ -767,7 +765,9 @@
             utterance.onend   = () => setPlaying(false);
             utterance.onerror = () => setPlaying(false);
 
-            synth.speak(utterance);
+            // Chrome: cancel() + okamžité speak() tiše selže — nutný setTimeout
+            synth.cancel();
+            setTimeout(() => synth.speak(utterance), 50);
         });
 
         stopBtn.addEventListener('click', () => {
