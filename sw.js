@@ -1,4 +1,4 @@
-const CACHE_NAME = 'audio-ctecka-v2';
+const CACHE_NAME = 'audio-ctecka-v3';
 
 const ASSETS = [
     './index.html',

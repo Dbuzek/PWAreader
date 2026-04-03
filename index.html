@@ -606,7 +606,7 @@
             }
 
             navigator.serviceWorker.register('sw.js').then((reg) => {
-                // Nový SW právě stahuje/čeká
+                // Nový SW se aktualizuje za běhu stránky → banner
                 reg.addEventListener('updatefound', () => {
                     const newSW = reg.installing;
                     newSW.addEventListener('statechange', () => {
@@ -616,9 +616,10 @@
                     });
                 });
 
-                // SW už čeká z předchozího načtení
+                // SW čekal ještě před načtením stránky (zůstal z minulé návštěvy)
+                // → aplikuj okamžitě a tiše, aby se uživatel nedostal na blank page
                 if (reg.waiting && navigator.serviceWorker.controller) {
-                    showUpdateBanner(reg.waiting);
+                    reg.waiting.postMessage('SKIP_WAITING');
                 }
 
                 // Periodicky kontroluj novou verzi (každých 60 s)
@@ -631,7 +632,13 @@
             });
 
             updateBtn.addEventListener('click', () => {
-                if (waitingSW) waitingSW.postMessage('SKIP_WAITING');
+                if (waitingSW) {
+                    waitingSW.postMessage('SKIP_WAITING');
+                } else if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        if (reg && reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+                    });
+                }
             });
         }
 
