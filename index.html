@@ -332,6 +332,35 @@
 
         button svg { width: 18px; height: 18px; flex-shrink: 0; }
 
+        /* ---------- Update banner ---------- */
+        #update-banner {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(16,185,129,0.08));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            color: var(--text);
+        }
+
+        #update-banner.show { display: flex; }
+        #update-banner .update-icon { font-size: 1.4rem; flex-shrink: 0; }
+        #update-banner p { flex: 1; line-height: 1.4; }
+        #update-banner p strong { color: #22c55e; }
+
+        .btn-update {
+            background: #22c55e;
+            color: white;
+            font-size: 0.8rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .btn-update:hover { background: #16a34a; }
+
         /* ---------- Install banner ---------- */
         #install-banner {
             display: none;
@@ -479,6 +508,13 @@
 
     <main>
 
+        <!-- Update banner -->
+        <div id="update-banner">
+            <div class="update-icon">🔄</div>
+            <p><strong>Nová verze je k dispozici</strong><br>Aktualizujte pro nejnovější funkce</p>
+            <button class="btn-update" id="update-btn">Aktualizovat</button>
+        </div>
+
         <!-- Install banner -->
         <div id="install-banner">
             <div class="install-icon">📲</div>
@@ -559,10 +595,45 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ── Service Worker ──────────────────────────────────────────
+        // ── Service Worker + auto-update ───────────────────────────
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .catch(err => console.error('SW error:', err));
+            const updateBanner = document.getElementById('update-banner');
+            const updateBtn    = document.getElementById('update-btn');
+            let waitingSW = null;
+
+            function showUpdateBanner(sw) {
+                waitingSW = sw;
+                updateBanner.classList.add('show');
+            }
+
+            navigator.serviceWorker.register('sw.js').then((reg) => {
+                // Nový SW právě stahuje/čeká
+                reg.addEventListener('updatefound', () => {
+                    const newSW = reg.installing;
+                    newSW.addEventListener('statechange', () => {
+                        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateBanner(newSW);
+                        }
+                    });
+                });
+
+                // SW už čeká z předchozího načtení
+                if (reg.waiting && navigator.serviceWorker.controller) {
+                    showUpdateBanner(reg.waiting);
+                }
+
+                // Periodicky kontroluj novou verzi (každých 60 s)
+                setInterval(() => reg.update(), 60_000);
+            }).catch(err => console.error('SW error:', err));
+
+            // Po aktivaci nového SW stránku znovu načti
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+
+            updateBtn.addEventListener('click', () => {
+                if (waitingSW) waitingSW.postMessage('SKIP_WAITING');
+            });
         }
 
         // ── Sdílený text z URL ──────────────────────────────────────
